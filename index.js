@@ -17,7 +17,12 @@ const APP_PORT = process.env.PORT || 3000; // Nếu không có PORT trong .env, 
 app.post("/slack-interactive", async (req, res) => {
   try {
     const payload = JSON.parse(req.body.payload); // Đảm bảo `req.body.payload` là chuỗi JSON
-    const actionValue = payload.actions[0].value;
+    const value = payload.actions[0].value;
+    // Split actionValue with |
+    // First part is the action and the second part is the branch
+    const actionValueParts = value.split("|");
+    const actionValue = actionValueParts[0];
+    const branch = actionValueParts[1];
 
     let pipelineTrigger = "";
 
@@ -40,7 +45,7 @@ app.post("/slack-interactive", async (req, res) => {
       `https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/trigger/pipeline`,
       {
         token: GITLAB_TOKEN,
-        ref: payload.channel.name,
+        ref: branch,
         variables: {
           ACTION: pipelineTrigger,
         },
