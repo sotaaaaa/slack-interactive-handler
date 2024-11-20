@@ -20,7 +20,7 @@ app.post("/slack-interactive", async (req, res) => {
     const value = payload.actions[0].value;
     // Split actionValue with |
     // First part is the action and the second part is the branch
-    const actionValueParts = value.split("|");
+    const actionValueParts = value.split("-");
     const actionValue = actionValueParts[0];
     const branch = actionValueParts[1];
 
