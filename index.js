@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const bodyParser = require("body-parser");
+const { exec } = require("child_process");
 
 const app = express();
 
@@ -40,17 +41,26 @@ app.post("/slack-interactive", async (req, res) => {
         return res.status(200).send("No action selected.");
     }
 
-    // Gửi request để trigger GitLab pipeline
-    await axios.post(
-      `https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/trigger/pipeline`,
-      {
-        token: GITLAB_TOKEN,
-        ref: branch,
-        variables: {
-          ACTION: pipelineTrigger,
-        },
+    // Xây dựng câu lệnh curl để trigger GitLab pipeline
+    const curlCommand = `curl --request POST \
+                             --form token=${GITLAB_TOKEN} \
+                             --form ref=${branch} \
+                             --form "variables[ACTION]=${pipelineTrigger}" \
+                             "https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/trigger/pipeline"`;
+
+    // Thực thi lệnh curl
+    exec(curlCommand, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`exec error: ${error}`);
+        return res.status(500).send("Failed to trigger pipeline.");
       }
-    );
+      if (stderr) {
+        console.error(`stderr: ${stderr}`);
+        return res.status(500).send("Failed to trigger pipeline.");
+      }
+
+      console.log(`stdout: ${stdout}`);
+    });
 
     // Trả về yêu cầu cập nhật lại message của Slack (ẩn action hoặc báo thành công)
     const messageUpdate = {
