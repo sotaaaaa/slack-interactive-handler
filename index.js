@@ -5,8 +5,9 @@ const bodyParser = require("body-parser");
 const app = express();
 app.use(bodyParser.json());
 
-const GITLAB_TOKEN = process.env.GITLAB_TOKEN;  // Sử dụng biến môi trường
-const GITLAB_PROJECT_ID = process.env.GITLAB_PROJECT_ID;  // Sử dụng biến môi trường
+const GITLAB_TOKEN = process.env.GITLAB_TOKEN; // Sử dụng biến môi trường
+const GITLAB_PROJECT_ID = process.env.GITLAB_PROJECT_ID; // Sử dụng biến môi trường
+const APP_PORT = process.env.PORT; // Sử dụng biến môi trường
 
 app.post("/slack-interactive", async (req, res) => {
   const payload = JSON.parse(req.body.payload);
@@ -32,7 +33,7 @@ app.post("/slack-interactive", async (req, res) => {
     await axios.post(
       `https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/trigger/pipeline`,
       {
-        token: GITLAB_TOKEN,  // Sử dụng biến môi trường
+        token: GITLAB_TOKEN, // Sử dụng biến môi trường
         ref: payload.channel.name,
         variables: {
           ACTION: pipelineTrigger,
@@ -47,6 +48,6 @@ app.post("/slack-interactive", async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("Slack interactive handler is running on port 3000.");
+app.listen(APP_PORT, () => {
+  console.log("Slack interactive handler is running on port " + APP_PORT);
 });
