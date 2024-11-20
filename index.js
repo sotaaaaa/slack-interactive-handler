@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const axios = require("axios");
 const bodyParser = require("body-parser");
@@ -7,7 +9,7 @@ app.use(bodyParser.json());
 
 const GITLAB_TOKEN = process.env.GITLAB_TOKEN; // Sử dụng biến môi trường
 const GITLAB_PROJECT_ID = process.env.GITLAB_PROJECT_ID; // Sử dụng biến môi trường
-const APP_PORT = process.env.PORT; // Sử dụng biến môi trường
+const APP_PORT = process.env.PORT || 3000; // Nếu không có PORT trong .env, dùng mặc định 3000
 
 app.post("/slack-interactive", async (req, res) => {
   const payload = JSON.parse(req.body.payload);
