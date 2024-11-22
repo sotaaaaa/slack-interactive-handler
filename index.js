@@ -3,7 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const bodyParser = require("body-parser");
-const { exec } = require("child_process");
+const FormData = require("form-data");
 
 const app = express();
 
@@ -19,8 +19,8 @@ app.post("/slack-interactive", async (req, res) => {
   try {
     const payload = JSON.parse(req.body.payload); // Đảm bảo `req.body.payload` là chuỗi JSON
     const value = payload.actions[0].value;
-    // Split actionValue with |
-    // First part is the action and the second part is the branch
+
+    // Tách action và branch từ giá trị Slack gửi lên
     const actionValueParts = value.split("-");
     const actionValue = actionValueParts[0];
     const branch = actionValueParts[1];
@@ -41,28 +41,20 @@ app.post("/slack-interactive", async (req, res) => {
         return res.status(200).send("No action selected.");
     }
 
-    // Xây dựng câu lệnh curl để trigger GitLab pipeline
-    const curlCommand = `curl --request POST \
-                             --form token=${GITLAB_TOKEN} \
-                             --form ref=${branch} \
-                             --form "variables[ACTION]=${pipelineTrigger}" \
-                             "https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/trigger/pipeline"`;
+    // Sử dụng FormData để gửi dữ liệu dạng multipart/form-data
+    const formData = new FormData();
+    formData.append("token", GITLAB_TOKEN);
+    formData.append("ref", branch);
+    formData.append("variables[ACTION]", pipelineTrigger);
 
-    // Thực thi lệnh curl
-    exec(curlCommand, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`exec error: ${error}`);
-        return res.status(500).send("Failed to trigger pipeline.");
-      }
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
-        return res.status(500).send("Failed to trigger pipeline.");
-      }
+    // Gửi request đến API GitLab để trigger pipeline
+    await axios.post(
+      `https://gitlab.com/api/v4/projects/${GITLAB_PROJECT_ID}/trigger/pipeline`,
+      formData,
+      { headers: formData.getHeaders() }
+    );
 
-      console.log(`stdout: ${stdout}`);
-    });
-
-    // Trả về yêu cầu cập nhật lại message của Slack (ẩn action hoặc báo thành công)
+    // Cập nhật message trên Slack (ẩn button sau khi nhấn)
     const messageUpdate = {
       text: "Pipeline triggered successfully!",
       replace_original: true, // Thay thế message gốc
@@ -75,12 +67,12 @@ app.post("/slack-interactive", async (req, res) => {
       ],
     };
 
-    // Cập nhật message trên Slack (làm ẩn button sau khi nhấn)
+    // Cập nhật phản hồi trên Slack
     await axios.post(payload.response_url, messageUpdate);
 
     res.status(200).send("Pipeline triggered successfully!");
   } catch (error) {
-    console.error(error);
+    console.error(error.response?.data || error.message);
     res.status(500).send("Failed to trigger pipeline.");
   }
 });
